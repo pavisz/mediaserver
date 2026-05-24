@@ -2,41 +2,48 @@
 <html lang="en">
 <head>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Inter', sans-serif; }</style>
+    <title>Overdrive | Cloud Storage</title>
 </head>
-<body class="bg-gray-50 flex h-screen overflow-hidden">
-
-    <aside class="w-64 bg-white border-r border-gray-200 p-6 flex flex-col">
-        <h1 class="text-xl font-bold text-blue-600 mb-10">OVERDRIVE</h1>
-        <nav class="space-y-4">
-            <button class="w-full text-left px-4 py-2 bg-blue-50 text-blue-700 rounded-lg font-medium">All Files</button>
-            <button class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg">Recent</button>
-        </nav>
+<body class="bg-gray-50 flex h-screen font-sans">
+    
+    <aside class="w-64 bg-white border-r border-gray-200 p-6">
+        <h1 class="text-2xl font-bold text-blue-600 mb-8">OVERDRIVE</h1>
+        <div class="space-y-6">
+            <button onclick="filterFiles('all')" class="block text-gray-600 hover:text-blue-600 font-medium">📁 All Files</button>
+            <button onclick="filterFiles('image')" class="block text-gray-600 hover:text-blue-600">🖼️ Images</button>
+            <button onclick="filterFiles('video')" class="block text-gray-600 hover:text-blue-600">🎬 Videos</button>
+        </div>
     </aside>
 
-    <main class="flex-1 p-8 overflow-y-auto">
-        <header class="flex justify-between items-center mb-8">
-            <h2 class="text-2xl font-semibold">My Cloud</h2>
-            <button onclick="document.getElementById('fileIn').click()" class="bg-blue-600 text-white px-6 py-2 rounded-full shadow-lg hover:bg-blue-700 transition">Upload</button>
+    <main class="flex-1 p-8">
+        <div class="flex justify-between items-center mb-8">
+            <input type="text" id="search" placeholder="Search files..." class="border rounded-lg px-4 py-2 w-96">
+            <button onclick="document.getElementById('fileIn').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">+ Upload</button>
             <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
-        </header>
+        </div>
 
-        <div id="grid" class="grid grid-cols-4 gap-6"></div>
+        <div id="grid" class="grid grid-cols-5 gap-6"></div>
     </main>
 
     <script>
         const BACKEND = "https://pavisz-mediaserver-backend.hf.space";
-        
+        let files = [];
+
         async function fetchFiles() {
             const res = await fetch(`${BACKEND}/api/files`);
-            const files = await res.json();
-            const grid = document.getElementById('grid');
-            grid.innerHTML = files.map(f => `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
-                    <div class="text-4xl mb-4">📄</div>
-                    <p class="text-sm font-medium truncate">${f.name}</p>
-                    <button onclick="del('${f.id}')" class="text-xs text-red-500 mt-2">Delete</button>
+            files = await res.json();
+            render(files);
+        }
+
+        function render(data) {
+            document.getElementById('grid').innerHTML = data.map(f => `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group">
+                    <div class="text-4xl mb-4 text-blue-500">${f.cat === 'video' ? '🎬' : '📄'}</div>
+                    <p class="text-sm font-semibold truncate">${f.name}</p>
+                    <div class="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                        <button onclick="del('${f.id}')" class="text-xs text-red-500">Delete</button>
+                        <a href="${BACKEND}/api/stream/${f.id}" target="_blank" class="text-xs text-blue-500">Open</a>
+                    </div>
                 </div>
             `).join('');
         }
@@ -48,8 +55,10 @@
         }
 
         async function del(id) {
-            await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'});
-            fetchFiles();
+            if(confirm("Delete this file?")) {
+                await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'});
+                fetchFiles();
+            }
         }
 
         fetchFiles();
