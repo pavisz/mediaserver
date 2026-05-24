@@ -2,87 +2,50 @@
 <html lang="en">
 <head>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Overdrive | Cloud Manager</title>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-bold text-gray-800">◈ OVERDRIVE</h1>
-        </div>
-        <div class="flex items-center gap-4">
-            <span id="uptime" class="text-xs text-gray-400 font-mono">UPTIME: 0s</span>
-            <button onclick="syncFiles()" id="sync-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Sync Archive</button>
+    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
+        <h1 class="text-xl font-bold text-blue-600">◈ OVERDRIVE</h1>
+        <div class="flex items-center gap-6">
+            <div id="status-badge" class="text-xs font-mono bg-green-100 text-green-700 px-3 py-1 rounded-full">SYSTEM: CHECKING...</div>
+            <button onclick="syncFiles()" id="sync-btn" class="text-sm bg-gray-100 px-4 py-2 rounded-lg">Sync Archive</button>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-8">
-        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center mb-8 bg-white hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
-            <p class="text-gray-500 font-medium">Drag & Drop .7z files here</p>
-            <p class="text-xs text-gray-400 mt-1">Files will be uploaded to your Telegram channel</p>
+    <main class="max-w-5xl mx-auto p-8">
+        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center mb-8 bg-white cursor-pointer hover:border-blue-500">
+            <p class="text-gray-500">Drag & Drop .7z files here</p>
             <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
         </div>
-
-        <div id="progress-container" class="hidden mb-6">
-            <div class="w-full bg-gray-200 rounded-full h-2"><div id="progress-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div></div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs font-bold">
-                    <tr><th class="p-4">Name</th><th class="p-4 text-right">Actions</th></tr>
-                </thead>
-                <tbody id="file-list" class="divide-y divide-gray-100"></tbody>
-            </table>
-        </div>
+        <table class="w-full bg-white rounded-xl shadow-sm border border-gray-200">
+            <tbody id="file-list"></tbody>
+        </table>
     </main>
 
     <script>
-        const BACKEND = ""; // Empty string = relative path (automatic)
-
-        // UI Logic
-        const dropZone = document.getElementById('drop-zone');
-        dropZone.onclick = () => document.getElementById('fileIn').click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-blue-50'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-        dropZone.ondrop = (e) => { e.preventDefault(); upload(e.dataTransfer.files[0]); };
-
+        async function updateStatus() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            document.getElementById('status-badge').innerText = `SYSTEM: ${data.status} | UPTIME: ${data.uptime_seconds}s`;
+        }
+        
         async function syncFiles() {
-            const btn = document.getElementById('sync-btn');
-            btn.innerText = "Syncing...";
-            await fetch(`${BACKEND}/api/sync`);
-            btn.innerText = "Sync Archive";
+            document.getElementById('sync-btn').innerText = "Syncing...";
+            await fetch('/api/sync');
+            document.getElementById('sync-btn').innerText = "Sync Archive";
             loadFiles();
         }
 
-        async function upload(file) {
-            const bar = document.getElementById('progress-bar');
-            document.getElementById('progress-container').classList.remove('hidden');
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${BACKEND}/api/upload`);
-            xhr.upload.onprogress = (e) => { bar.style.width = (e.loaded / e.total) * 100 + '%'; };
-            xhr.onload = () => { loadFiles(); document.getElementById('progress-container').classList.add('hidden'); };
-            const fd = new FormData(); fd.append('file', file);
-            xhr.send(fd);
-        }
-
         async function loadFiles() {
-            const res = await fetch(`${BACKEND}/api/files`);
+            const res = await fetch('/api/files');
             const data = await res.json();
             document.getElementById('file-list').innerHTML = data.map(f => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-4 text-sm font-medium text-gray-700 font-mono">${f.name}</td>
-                    <td class="p-4 text-right">
-                        <a href="${BACKEND}/api/stream/${f.id}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-sm">Download</a>
-                    </td>
-                </tr>
+                <tr class="border-b"><td class="p-4">${f.name}</td><td class="p-4 text-right"><a href="/api/stream/${f.id}" class="text-blue-600">Download</a></td></tr>
             `).join('');
         }
-        
-        setInterval(() => {
-            let s = parseInt(document.getElementById('uptime').innerText.match(/\d+/));
-            document.getElementById('uptime').innerText = `UPTIME: ${s + 1}s`;
-        }, 1000);
-        
+
+        setInterval(updateStatus, 5000);
+        updateStatus();
         loadFiles();
     </script>
 </body>
