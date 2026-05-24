@@ -5,25 +5,31 @@
     <title>Overdrive | Cloud Manager</title>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
-        <h1 class="text-xl font-bold text-blue-600">◈ OVERDRIVE</h1>
-        <button onclick="syncFiles()" id="sync-btn" class="text-sm bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200">Sync Channel</button>
+    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-gray-800">◈ OVERDRIVE</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="uptime" class="text-xs text-gray-400 font-mono">UPTIME: 0s</span>
+            <button onclick="syncFiles()" id="sync-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Sync Archive</button>
+        </div>
     </nav>
 
-    <main class="max-w-5xl mx-auto p-8">
-        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center mb-8 bg-white hover:border-blue-500 transition cursor-pointer">
+    <main class="max-w-6xl mx-auto p-8">
+        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center mb-8 bg-white hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
             <p class="text-gray-500 font-medium">Drag & Drop .7z files here</p>
+            <p class="text-xs text-gray-400 mt-1">Files will be uploaded to your Telegram channel</p>
             <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
         </div>
 
         <div id="progress-container" class="hidden mb-6">
-            <div class="w-full bg-gray-200 rounded-full h-2.5"><div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div></div>
+            <div class="w-full bg-gray-200 rounded-full h-2"><div id="progress-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div></div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
-                    <tr><th class="p-4">Filename</th><th class="p-4 text-right">Actions</th></tr>
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs font-bold">
+                    <tr><th class="p-4">Name</th><th class="p-4 text-right">Actions</th></tr>
                 </thead>
                 <tbody id="file-list" class="divide-y divide-gray-100"></tbody>
             </table>
@@ -31,13 +37,20 @@
     </main>
 
     <script>
-        const BACKEND = "https://pavisz-mediaserver-backend.hf.space";
+        const BACKEND = ""; // Empty string = relative path (automatic)
+
+        // UI Logic
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.onclick = () => document.getElementById('fileIn').click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-blue-50'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        dropZone.ondrop = (e) => { e.preventDefault(); upload(e.dataTransfer.files[0]); };
 
         async function syncFiles() {
             const btn = document.getElementById('sync-btn');
             btn.innerText = "Syncing...";
             await fetch(`${BACKEND}/api/sync`);
-            btn.innerText = "Sync Channel";
+            btn.innerText = "Sync Archive";
             loadFiles();
         }
 
@@ -52,25 +65,24 @@
             xhr.send(fd);
         }
 
-        async function del(id) {
-            if(!confirm("Remove file from list?")) return;
-            await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'});
-            loadFiles();
-        }
-
         async function loadFiles() {
             const res = await fetch(`${BACKEND}/api/files`);
             const data = await res.json();
             document.getElementById('file-list').innerHTML = data.map(f => `
-                <tr class="hover:bg-blue-50">
-                    <td class="p-4 font-mono text-gray-700">${f.name}</td>
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="p-4 text-sm font-medium text-gray-700 font-mono">${f.name}</td>
                     <td class="p-4 text-right">
-                        <a href="${BACKEND}/api/stream/${f.id}" target="_blank" class="text-blue-600 font-bold px-3">Download</a>
-                        <button onclick="del('${f.id}')" class="text-red-400 hover:text-red-600">Delete</button>
+                        <a href="${BACKEND}/api/stream/${f.id}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-sm">Download</a>
                     </td>
                 </tr>
             `).join('');
         }
+        
+        setInterval(() => {
+            let s = parseInt(document.getElementById('uptime').innerText.match(/\d+/));
+            document.getElementById('uptime').innerText = `UPTIME: ${s + 1}s`;
+        }, 1000);
+        
         loadFiles();
     </script>
 </body>
