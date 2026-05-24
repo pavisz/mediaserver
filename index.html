@@ -1,311 +1,58 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NEXUS MediaServer v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #050505; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        /* Custom Scrollbar for sleekness */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
-    </style>
-    <script>
-        
-        const HF_BACKEND_URL = "pavisz-mediaserver-backend.hf.space";
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; }</style>
 </head>
-<body class="text-zinc-300 min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200 flex flex-col">
+<body class="bg-gray-50 flex h-screen overflow-hidden">
 
-    <nav class="sticky top-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center shadow-2xl">
-        <div class="flex items-center gap-4">
-            <div class="relative group cursor-pointer">
-                <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-                <svg class="relative w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-                </svg>
-            </div>
-            <div>
-                <h1 class="text-2xl font-extrabold tracking-tight text-white">NEXUS<span class="text-cyan-400 font-light">Server</span></h1>
-                <p class="mono text-[10px] text-cyan-500/70 tracking-widest uppercase">Global Media Matrix</p>
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-4">
-            <button onclick="queryCloudDatabase()" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg text-sm font-semibold transition">
-                <span class="text-cyan-400">⟳</span> Sync DB
-            </button>
-            <div id="connection-badge" class="hidden md:flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-full mono text-xs">
-                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div> CORE_ONLINE
-            </div>
-        </div>
-    </nav>
+    <aside class="w-64 bg-white border-r border-gray-200 p-6 flex flex-col">
+        <h1 class="text-xl font-bold text-blue-600 mb-10">OVERDRIVE</h1>
+        <nav class="space-y-4">
+            <button class="w-full text-left px-4 py-2 bg-blue-50 text-blue-700 rounded-lg font-medium">All Files</button>
+            <button class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg">Recent</button>
+        </nav>
+    </aside>
 
-    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
-        
-        <section class="xl:col-span-7 flex flex-col gap-6">
-            
-            <div class="bg-[#0f0f11] border border-white/10 rounded-2xl p-2 shadow-2xl relative overflow-hidden group min-h-[400px] flex flex-col">
-                <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none"></div>
-                
-                <div class="p-4 border-b border-white/5 flex justify-between items-center bg-[#0a0a0c] rounded-t-xl z-10">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">📺</div>
-                        <h2 id="media-title" class="text-sm font-semibold text-white truncate max-w-[300px]">System Standby</h2>
-                    </div>
-                    <span id="media-type-badge" class="mono text-[10px] uppercase bg-white/10 px-2 py-1 rounded text-zinc-400 tracking-wider">AWAITING_INPUT</span>
-                </div>
+    <main class="flex-1 p-8 overflow-y-auto">
+        <header class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-semibold">My Cloud</h2>
+            <button onclick="document.getElementById('fileIn').click()" class="bg-blue-600 text-white px-6 py-2 rounded-full shadow-lg hover:bg-blue-700 transition">Upload</button>
+            <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
+        </header>
 
-                <div class="flex-1 flex items-center justify-center p-4 z-10 bg-black/40 rounded-b-xl relative">
-                    <div id="empty-state" class="text-center space-y-4">
-                        <div class="text-5xl opacity-20">🪐</div>
-                        <p class="text-sm text-zinc-500">Select a file from the repository to initiate stream.</p>
-                    </div>
-
-                    <video id="video-player" controls class="w-full h-full max-h-[600px] rounded-lg hidden shadow-2xl border border-white/5">
-                        <source id="video-source" src="" type="">
-                    </video>
-
-                    <div id="audio-player-container" class="w-full max-w-md hidden">
-                        <div class="bg-gradient-to-br from-[#1a1a24] to-[#0a0a0c] p-8 rounded-2xl border border-white/10 shadow-2xl text-center">
-                            <div class="w-24 h-24 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
-                                <span class="text-4xl">🎵</span>
-                            </div>
-                            <audio id="audio-player" controls class="w-full custom-audio">
-                                <source id="audio-source" src="" type="">
-                            </audio>
-                        </div>
-                    </div>
-
-                    <img id="image-viewer" src="" class="max-w-full max-h-[600px] object-contain rounded-lg hidden shadow-2xl" alt="Streamed Image">
-
-                    <iframe id="pdf-viewer" class="w-full h-[600px] rounded-lg hidden bg-white" src=""></iframe>
-                </div>
-            </div>
-
-            <div id="drop-zone" class="bg-gradient-to-r from-cyan-900/10 to-blue-900/10 border-2 border-dashed border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-900/20 rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer group">
-                <input type="file" id="file-input" class="hidden" />
-                <div id="upload-idle-view">
-                    <div class="text-3xl mb-3 group-hover:-translate-y-2 transition duration-300">📤</div>
-                    <h3 class="text-lg font-bold text-white mb-1">Upload to NEXUS Core</h3>
-                    <p class="text-sm text-zinc-400">Drag & drop files here, or click to browse</p>
-                </div>
-                
-                <div id="upload-active-view" class="hidden space-y-4">
-                    <div class="flex justify-center"><div class="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div></div>
-                    <p class="text-sm font-bold text-cyan-400 mono tracking-widest animate-pulse">TRANSMITTING DATA TO CLOUD...</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="xl:col-span-5 flex flex-col h-[calc(100vh-120px)]">
-            <div class="bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl flex flex-col flex-1 overflow-hidden">
-                
-                <div class="p-4 border-b border-white/10 bg-white/[0.02]">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-sm font-bold uppercase tracking-widest text-zinc-400 mono">Data Repository</h2>
-                        <span id="file-count" class="bg-cyan-500/20 text-cyan-400 text-xs font-bold px-2 py-1 rounded">0 Files</span>
-                    </div>
-                    
-                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        <button onclick="filterUI('all')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 text-white transition whitespace-nowrap">All Files</button>
-                        <button onclick="filterUI('video')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/20 text-zinc-400 hover:text-white transition whitespace-nowrap">🎬 Videos</button>
-                        <button onclick="filterUI('audio')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/20 text-zinc-400 hover:text-white transition whitespace-nowrap">🎵 Audio</button>
-                        <button onclick="filterUI('image')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/20 text-zinc-400 hover:text-white transition whitespace-nowrap">🖼️ Images</button>
-                        <button onclick="filterUI('document')" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/20 text-zinc-400 hover:text-white transition whitespace-nowrap">📄 PDFs</button>
-                    </div>
-                </div>
-
-                <div id="file-directory" class="flex-1 overflow-y-auto p-3 space-y-2">
-                    <div class="text-center py-20 text-zinc-600 text-sm mono animate-pulse">Initializing Matrix Connect...</div>
-                </div>
-            </div>
-        </section>
+        <div id="grid" class="grid grid-cols-4 gap-6"></div>
     </main>
 
     <script>
-        const backendUrl = HF_BACKEND_URL;
-        let globalFileCache = []; 
-
-        const directoryEl = document.getElementById('file-directory');
-        const fileCountEl = document.getElementById('file-count');
-        const badgeEl = document.getElementById('connection-badge');
+        const BACKEND = "https://pavisz-mediaserver-backend.hf.space";
         
-        // Players
-        const titleEl = document.getElementById('media-title');
-        const badgeTypeEl = document.getElementById('media-type-badge');
-        const pEmpty = document.getElementById('empty-state');
-        const pVideo = document.getElementById('video-player');
-        const pAudio = document.getElementById('audio-player-container');
-        const pImage = document.getElementById('image-viewer');
-        const pPdf = document.getElementById('pdf-viewer');
-
-        // Fetch files from Backend
-        async function queryCloudDatabase() {
-            try {
-                const response = await fetch(`${backendUrl}/files`);
-                if (!response.ok) throw new Error("Connection Refused");
-                globalFileCache = await response.json();
-                
-                badgeEl.classList.remove('hidden');
-                renderFileList(globalFileCache);
-            } catch (err) {
-                directoryEl.innerHTML = `<div class="text-center py-10 text-red-400 p-4 bg-red-500/10 rounded-xl mx-4 mt-4 border border-red-500/20"><b>CRITICAL ERROR:</b><br>${err.message}</div>`;
-            }
+        async function fetchFiles() {
+            const res = await fetch(`${BACKEND}/api/files`);
+            const files = await res.json();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = files.map(f => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+                    <div class="text-4xl mb-4">📄</div>
+                    <p class="text-sm font-medium truncate">${f.name}</p>
+                    <button onclick="del('${f.id}')" class="text-xs text-red-500 mt-2">Delete</button>
+                </div>
+            `).join('');
         }
 
-        // Render UI Matrix
-        function renderFileList(files) {
-            fileCountEl.innerText = `${files.length} Files`;
-            directoryEl.innerHTML = "";
-
-            if(files.length === 0) {
-                directoryEl.innerHTML = `<div class="text-center py-20 text-zinc-500">Repository is empty.</div>`;
-                return;
-            }
-
-            files.forEach(file => {
-                let icon = "📄";
-                if(file.category === "video") icon = "🎬";
-                if(file.category === "audio") icon = "🎵";
-                if(file.category === "image") icon = "🖼️";
-                if(file.mime_type === "application/pdf") icon = "📕";
-
-                const fileRow = document.createElement('div');
-                fileRow.className = "group flex items-center justify-between p-3 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-cyan-500/30 rounded-xl transition-all duration-200 cursor-pointer";
-                
-                // Clicking the row plays the media
-                fileRow.onclick = (e) => {
-                    // Prevent triggering if they clicked download or delete buttons
-                    if(e.target.closest('button') || e.target.closest('a')) return;
-                    deployStream(file);
-                };
-
-                fileRow.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden flex-1">
-                        <div class="text-xl opacity-80">${icon}</div>
-                        <div class="truncate">
-                            <h4 class="text-sm font-semibold text-zinc-200 group-hover:text-white truncate">${file.filename}</h4>
-                            <p class="text-[10px] text-zinc-500 mono uppercase mt-0.5">${file.category} • ID:${file.telegram_id.substring(0,6)}...</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2 pl-3">
-                        <a href="${backendUrl}/download/${file.telegram_id}?filename=${encodeURIComponent(file.filename)}" download title="Download" class="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition border border-transparent hover:border-blue-500/30">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        </a>
-                        <button onclick="requestDelete('${file.telegram_id}')" title="Delete File" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition border border-transparent hover:border-red-500/30">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </div>
-                `;
-                directoryEl.appendChild(fileRow);
-            });
+        async function upload(file) {
+            const fd = new FormData(); fd.append('file', file);
+            await fetch(`${BACKEND}/api/upload`, {method: 'POST', body: fd});
+            fetchFiles();
         }
 
-        // Dynamic Filtering
-        window.filterUI = function(type) {
-            if(type === 'all') renderFileList(globalFileCache);
-            else if(type === 'document') renderFileList(globalFileCache.filter(f => f.mime_type === 'application/pdf' || f.category === 'document'));
-            else renderFileList(globalFileCache.filter(f => f.category === type));
+        async function del(id) {
+            await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'});
+            fetchFiles();
         }
 
-        // Delete Handler (Requires Backend Update)
-        window.requestDelete = async function(telegramId) {
-            if(!confirm("Warning: Delete this file from NEXUS Database?")) return;
-            
-            try {
-                // We will build this endpoint in the backend next!
-                const res = await fetch(`${backendUrl}/delete/${telegramId}`, { method: 'DELETE' });
-                if(res.ok) {
-                    await queryCloudDatabase(); // Refresh UI automatically
-                } else {
-                    alert("Delete endpoint not found. Please upgrade your backend server code first.");
-                }
-            } catch (err) {
-                alert("Server unreachable.");
-            }
-        }
-
-        // Smart Media Streamer
-        window.deployStream = function(file) {
-            titleEl.innerText = file.filename;
-            badgeTypeEl.innerText = `${file.category} STREAM`;
-            
-            // Hide all players
-            [pEmpty, pVideo, pAudio, pImage, pPdf].forEach(el => el.classList.add('hidden'));
-            document.getElementById('video-player').pause();
-            document.getElementById('audio-player').pause();
-
-            const streamUrl = `${backendUrl}/stream/${file.telegram_id}?mime=${encodeURIComponent(file.mime_type)}`;
-
-            if (file.category === 'video') {
-                document.getElementById('video-source').src = streamUrl;
-                document.getElementById('video-source').type = file.mime_type;
-                pVideo.classList.remove('hidden');
-                pVideo.load(); pVideo.play();
-            } 
-            else if (file.category === 'audio') {
-                document.getElementById('audio-source').src = streamUrl;
-                document.getElementById('audio-source').type = file.mime_type;
-                pAudio.classList.remove('hidden');
-                document.getElementById('audio-player').load(); document.getElementById('audio-player').play();
-            } 
-            else if (file.category === 'image') {
-                pImage.src = streamUrl;
-                pImage.classList.remove('hidden');
-            } 
-            else if (file.mime_type === 'application/pdf') {
-                pPdf.src = streamUrl;
-                pPdf.classList.remove('hidden');
-            } 
-            else {
-                pEmpty.classList.remove('hidden');
-                alert("Format strictly requires direct download.");
-            }
-        };
-
-        // Upload Mechanics
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const viewIdle = document.getElementById('upload-idle-view');
-        const viewActive = document.getElementById('upload-active-view');
-
-        async function processUpload(file) {
-            if (!file) return;
-            viewIdle.classList.add('hidden');
-            viewActive.classList.remove('hidden');
-            dropZone.classList.add('pointer-events-none', 'border-cyan-500');
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            try {
-                const res = await fetch(`${backendUrl}/upload`, { method: "POST", body: formData });
-                if(!res.ok) throw new Error("Upload Failed");
-                await queryCloudDatabase();
-            } catch (err) {
-                alert(err.message);
-            } finally {
-                viewActive.classList.add('hidden');
-                viewIdle.classList.remove('hidden');
-                dropZone.classList.remove('pointer-events-none', 'border-cyan-500');
-            }
-        }
-
-        dropZone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => processUpload(e.target.files[0]));
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-cyan-400', 'bg-cyan-900/20'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-cyan-400', 'bg-cyan-900/20'));
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-cyan-400', 'bg-cyan-900/20'); processUpload(e.dataTransfer.files[0]); });
-
-        // Boot
-        queryCloudDatabase();
+        fetchFiles();
     </script>
 </body>
 </html>
