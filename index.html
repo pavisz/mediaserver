@@ -2,37 +2,71 @@
 <html lang="en">
 <head>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-100 transition-colors">
+    <nav class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-8 py-4 flex justify-between items-center shadow-sm">
         <h1 class="text-xl font-bold text-blue-600">◈ OVERDRIVE</h1>
-        <div class="flex items-center gap-6">
-            <div id="status-badge" class="text-xs font-mono bg-green-100 text-green-700 px-3 py-1 rounded-full">SYSTEM: CHECKING...</div>
-            <button onclick="syncFiles()" id="sync-btn" class="text-sm bg-gray-100 px-4 py-2 rounded-lg">Sync Archive</button>
+        <div class="flex items-center gap-4">
+            <span id="status-badge" class="text-xs font-mono bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-1 rounded-full">SYSTEM: LOADING...</span>
+            <button onclick="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-lg text-xs">Theme</button>
+            <button onclick="syncFiles()" id="sync-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Sync</button>
         </div>
     </nav>
 
     <main class="max-w-5xl mx-auto p-8">
-        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center mb-8 bg-white cursor-pointer hover:border-blue-500">
-            <p class="text-gray-500">Drag & Drop .7z files here</p>
+        <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-10 text-center mb-8 bg-white dark:bg-gray-800 hover:border-blue-500 transition cursor-pointer">
+            <p class="text-gray-500 dark:text-gray-400">Drag & Drop .7z files here</p>
             <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
         </div>
-        <table class="w-full bg-white rounded-xl shadow-sm border border-gray-200">
-            <tbody id="file-list"></tbody>
-        </table>
+
+        <div id="progress-container" class="hidden mb-6">
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-900 text-gray-500 uppercase text-xs">
+                    <tr><th class="p-4">Filename</th><th class="p-4 text-right">Actions</th></tr>
+                </thead>
+                <tbody id="file-list" class="divide-y divide-gray-100 dark:divide-gray-700"></tbody>
+            </table>
+        </div>
     </main>
 
     <script>
-        async function updateStatus() {
-            const res = await fetch('/api/status');
-            const data = await res.json();
-            document.getElementById('status-badge').innerText = `SYSTEM: ${data.status} | UPTIME: ${data.uptime_seconds}s`;
+        // Theme Logic
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
         }
-        
-        async function syncFiles() {
-            document.getElementById('sync-btn').innerText = "Syncing...";
-            await fetch('/api/sync');
-            document.getElementById('sync-btn').innerText = "Sync Archive";
+        if (localStorage.getItem('darkMode') === 'true') document.documentElement.classList.add('dark');
+
+        // Drag & Drop Logic
+        const dz = document.getElementById('drop-zone');
+        dz.onclick = () => document.getElementById('fileIn').click();
+        dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('border-blue-500'); };
+        dz.ondragleave = () => dz.classList.remove('border-blue-500');
+        dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('border-blue-500'); upload(e.dataTransfer.files[0]); };
+
+        async function upload(file) {
+            const bar = document.getElementById('progress-bar');
+            document.getElementById('progress-container').classList.remove('hidden');
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/upload');
+            xhr.upload.onprogress = (e) => { bar.style.width = (e.loaded / e.total) * 100 + '%'; };
+            xhr.onload = () => { loadFiles(); document.getElementById('progress-container').classList.add('hidden'); };
+            const fd = new FormData(); fd.append('file', file);
+            xhr.send(fd);
+        }
+
+        async function del(id) {
+            if(!confirm("Are you sure?")) return;
+            await fetch(`/api/delete/${id}`, {method: 'DELETE'});
             loadFiles();
         }
 
@@ -40,12 +74,23 @@
             const res = await fetch('/api/files');
             const data = await res.json();
             document.getElementById('file-list').innerHTML = data.map(f => `
-                <tr class="border-b"><td class="p-4">${f.name}</td><td class="p-4 text-right"><a href="/api/stream/${f.id}" class="text-blue-600">Download</a></td></tr>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="p-4 font-mono">${f.name}</td>
+                    <td class="p-4 text-right">
+                        <a href="/api/stream/${f.id}" class="text-blue-500 px-3">Download</a>
+                        <button onclick="del('${f.id}')" class="text-red-400 hover:text-red-600">Delete</button>
+                    </td>
+                </tr>
             `).join('');
         }
 
-        setInterval(updateStatus, 5000);
-        updateStatus();
+        // Status Update
+        setInterval(async () => {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            document.getElementById('status-badge').innerText = `SYSTEM: ${data.status} | UPTIME: ${data.uptime_seconds}s`;
+        }, 5000);
+
         loadFiles();
     </script>
 </body>
