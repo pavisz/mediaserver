@@ -2,66 +2,51 @@
 <html lang="en">
 <head>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Overdrive | Cloud Storage</title>
+    <title>Overdrive | Archive Manager</title>
 </head>
-<body class="bg-gray-50 flex h-screen font-sans">
-    
-    <aside class="w-64 bg-white border-r border-gray-200 p-6">
-        <h1 class="text-2xl font-bold text-blue-600 mb-8">OVERDRIVE</h1>
-        <div class="space-y-6">
-            <button onclick="filterFiles('all')" class="block text-gray-600 hover:text-blue-600 font-medium">📁 All Files</button>
-            <button onclick="filterFiles('image')" class="block text-gray-600 hover:text-blue-600">🖼️ Images</button>
-            <button onclick="filterFiles('video')" class="block text-gray-600 hover:text-blue-600">🎬 Videos</button>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <nav class="bg-white border-b px-8 py-4 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-800">OVERDRIVE ◈ STORAGE</h1>
+        <div class="flex gap-4">
+            <button onclick="sync()" class="text-sm bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Sync Channel</button>
         </div>
-    </aside>
+    </nav>
 
-    <main class="flex-1 p-8">
-        <div class="flex justify-between items-center mb-8">
-            <input type="text" id="search" placeholder="Search files..." class="border rounded-lg px-4 py-2 w-96">
-            <button onclick="document.getElementById('fileIn').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">+ Upload</button>
-            <input type="file" id="fileIn" class="hidden" onchange="upload(this.files[0])">
+    <main class="flex-1 p-8 max-w-6xl mx-auto w-full">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 border-b">
+                    <tr><th class="p-4">Filename</th><th class="p-4">Actions</th></tr>
+                </thead>
+                <tbody id="file-list"></tbody>
+            </table>
         </div>
-
-        <div id="grid" class="grid grid-cols-5 gap-6"></div>
     </main>
 
     <script>
         const BACKEND = "https://pavisz-mediaserver-backend.hf.space";
-        let files = [];
 
-        async function fetchFiles() {
-            const res = await fetch(`${BACKEND}/api/files`);
-            files = await res.json();
-            render(files);
+        async function sync() {
+            await fetch(`${BACKEND}/api/sync`);
+            load();
         }
 
-        function render(data) {
-            document.getElementById('grid').innerHTML = data.map(f => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group">
-                    <div class="text-4xl mb-4 text-blue-500">${f.cat === 'video' ? '🎬' : '📄'}</div>
-                    <p class="text-sm font-semibold truncate">${f.name}</p>
-                    <div class="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="del('${f.id}')" class="text-xs text-red-500">Delete</button>
-                        <a href="${BACKEND}/api/stream/${f.id}" target="_blank" class="text-xs text-blue-500">Open</a>
-                    </div>
-                </div>
+        async function load() {
+            const res = await fetch(`${BACKEND}/api/files`);
+            const data = await res.json();
+            document.getElementById('file-list').innerHTML = data.map(f => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-mono text-sm">${f.name}</td>
+                    <td class="p-4">
+                        <a href="${BACKEND}/api/stream/${f.id}" class="text-blue-600 mr-4">Download</a>
+                        <button onclick="del('${f.id}')" class="text-red-500">Delete</button>
+                    </td>
+                </tr>
             `).join('');
         }
-
-        async function upload(file) {
-            const fd = new FormData(); fd.append('file', file);
-            await fetch(`${BACKEND}/api/upload`, {method: 'POST', body: fd});
-            fetchFiles();
-        }
-
-        async function del(id) {
-            if(confirm("Delete this file?")) {
-                await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'});
-                fetchFiles();
-            }
-        }
-
-        fetchFiles();
+        
+        async function del(id) { await fetch(`${BACKEND}/api/delete/${id}`, {method: 'DELETE'}); load(); }
+        load();
     </script>
 </body>
 </html>
